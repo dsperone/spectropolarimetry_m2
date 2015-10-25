@@ -22,7 +22,7 @@ function moyenne_dark,seq_dark
 			mean_dark(i,j)=mean(x)
 		endfor
 	endfor
-
+	return,mean_dark
 	end
 
 function traitement_image,tab,tab_dark
