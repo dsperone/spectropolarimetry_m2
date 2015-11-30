@@ -206,9 +206,9 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    ; Etalonnage en longueur d'onde du spectre
    print,"Etalonnage en longueur d'onde du spectre"
    print,'Sélection raie la plus à gauche'
-   pix_raie1=centre_gravite(data_haut,Y1,ecart_atm)
+   pix_raie1=centre_gravite(data_haut_interpol,Y1,ecart_atm)
    print,'Sélection raie juste à droite de la deuxième raie du Fe'
-   pix_raie2=centre_gravite(data_haut,Y1,ecart_atm)
+   pix_raie2=centre_gravite(data_haut_interpol,Y1,ecart_atm)
    lambda_final=pix_to_lambda(pix_raie1,pix_raie2,dim_tot)
    
    ; Vérification de la correction du décalage
