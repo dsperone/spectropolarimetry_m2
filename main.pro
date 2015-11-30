@@ -2,7 +2,7 @@ FUNCTION centre_gravite,fenetre,Y1,ecart
 	; Détermine le centre de gravité d'une raie
 	; Entrées : fenêtre découpée dans le FITS, Y1 ordonnée du profil, ecart au centre
 	; Sortie : lambda_G (centre de gravité de la raie)
-   window,0,xs=688,ys=520
+   window,0
    ; Zoom sur la raie
    plot,fenetre(*,Y1),background=255,color=0
    print,'sélection grossière des bords de la raie pour zoomer dessus'
@@ -15,8 +15,8 @@ FUNCTION centre_gravite,fenetre,Y1,ecart
    print,'...sélection du centre de la raie...'
    cursor,centre_raie,Y2
    ; Calcul des bords de la raie
-   lambda_A = uint(mini+centre_raie-ecart)
-   lambda_B = uint(mini+centre_raie+ecart)
+   lambda_A = mini+centre_raie-ecart
+   lambda_B = mini+centre_raie+ecart
    print,'lambda_A = ',lambda_A
    print,'lambda_B = ',lambda_B
    ; Intensité du continu pour calculer la fonction de poids
@@ -88,11 +88,11 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    tvscl,flat
    print,'pas de grille ?'
    print,'...cheveu 1...'
-   cursor,X1,Y1
+   cursor,X1,Y1,/device
    ecart = 5.
    flat1 = flat(X1,Y1-ecart:Y1+ecart)
    print,'...cheveu 2...'
-   cursor,X2,Y2
+   cursor,X2,Y2,/device
    flat2 = flat(X1,Y2-ecart:Y2+ecart)
    min1 = min(flat1,indice_min1)
    min2 = min(flat2,indice_min2)
@@ -114,7 +114,7 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    window,1,xs=688,ys=520
    tvscl,flat
    print,"...bas de la fenêtre de la zone d'intéret..."
-   cursor,X1,Y1
+   cursor,X1,Y1,/device
    wdelete,0
    wdelete,1
    min1 = min(flat(X1,Y1-ecart:Y1+ecart),indice_min1)
@@ -166,8 +166,8 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
       print,'facteur de transmission ?'
       window,0
       tvscl,data_bas
-      cursor,X1,Y1
-      cursor,X2,Y2
+      cursor,X1,Y1,/device
+      cursor,X2,Y2,/device
       int1 = total(data_bas(X1:X2,Y1))
       int2 = total(data_haut(X1:X2,Y1))
       t = int1 / int2
@@ -197,19 +197,20 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    n_lambda = 688 / delta_lambda_G
    lambda = delta_lambda_G * findgen(n_lambda)
    data_bas_interpol = interpolate(data_bas(*,Y1),lambda,cubic=-0.5)
-   dim=size(data_bas_interpol)
-   dim_tot=size(1)
    data_bas_interpol = data_bas_interpol(1:n_lambda-1)
    data_haut_interpol = interpolate(data_haut(*,Y1),lambda,cubic=-0.5)
    data_haut_interpol = data_haut_interpol(0:n_lambda-2)
+   dim=size(data_bas_interpol)
+   dim_tot=size(1)
+   print,dim(1)
 
    ; Etalonnage en longueur d'onde du spectre
-   print,"Etalonnage en longueur d'onde du spectre"
-   print,'Sélection raie la plus à gauche'
-   pix_raie1=centre_gravite(data_haut_interpol,Y1,ecart_atm)
-   print,'Sélection raie juste à droite de la deuxième raie du Fe'
-   pix_raie2=centre_gravite(data_haut_interpol,Y1,ecart_atm)
-   lambda_final=pix_to_lambda(pix_raie1,pix_raie2,dim_tot)
+   ;print,"Etalonnage en longueur d'onde du spectre"
+   ;print,'Sélection raie la plus à gauche'
+   ;pix_raie1=centre_gravite(data_haut_interpol,Y1,ecart_atm)
+   ;print,'Sélection raie juste à droite de la deuxième raie du Fe'
+   ;pix_raie2=centre_gravite(data_haut_interpol,Y1,ecart_atm)
+   ;lambda_final=pix_to_lambda(pix_raie1,pix_raie2,dim_tot)
    
    ; Vérification de la correction du décalage
    print,'Vérification du décalage'
@@ -223,10 +224,10 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    plot,data_bas_interpol,background=255,color=0
    oplot,data_haut_interpol,color=0
    test_fe=0
-   WHILE (test_t EQ 0) do begin
-   print,'Passer à la sélection de la raie du Fe à étudier ? 0=Non, 1=Oui'
-   read,test_fe
-   endwhile
+   WHILE (test_t EQ 0) DO BEGIN
+      print,'Passer à la sélection de la raie du Fe à étudier ? 0=Non, 1=Oui'
+      read,test_fe
+   ENDWHILE
    wdelete,0
    wdelete,1
 
@@ -243,9 +244,9 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    raie_etudiee_haut=data_haut_interpol(x1:x2)
    I=(raie_etudiee_haut-raie_etudiee_bas)/2.
    window,1
-   cgplot,I,color=cgcolor('red')
-   oplot,raie_etudiee_bas,color=cgcolor('black'),linestyle=1
-   oplot,raie_etudiee_bas,color=cgcolor('black'),linestyle=2
+   ;cgplot,I,color=cgcolor('red')
+   cgplot,raie_etudiee_bas,color=cgcolor('black'),linestyle=0
+   oplot,raie_etudiee_haut,color=cgcolor('red'),linestyle=1
 
 
 
