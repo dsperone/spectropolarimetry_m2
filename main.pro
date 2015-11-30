@@ -193,22 +193,23 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    delta_lambda_G = abs(lambda_G_haut - lambda_G_bas)
    print,'décalage delta_lambda_G =',delta_lambda_G
 
+   ; Interpolation linéaire des profils et correction du décalage
+   n_lambda = 688 / delta_lambda_G
+   lambda = delta_lambda_G * findgen(n_lambda)
+   data_bas_interpol = interpolate(data_bas(*,Y1),lambda,cubic=-0.5)
+   dim=size(data_bas_interpol)
+   dim_tot=size(1)
+   data_bas_interpol = data_bas_interpol(1:n_lambda-1)
+   data_haut_interpol = interpolate(data_haut(*,Y1),lambda,cubic=-0.5)
+   data_haut_interpol = data_haut_interpol(0:n_lambda-2)
+
    ; Etalonnage en longueur d'onde du spectre
    print,"Etalonnage en longueur d'onde du spectre"
    print,'Sélection raie la plus à gauche'
    pix_raie1=centre_gravite(data_haut,Y1,ecart_atm)
    print,'Sélection raie juste à droite de la deuxième raie du Fe'
    pix_raie2=centre_gravite(data_haut,Y1,ecart_atm)
-   lambda_final=pix_to_lambda(pix_raie1,pix_raie2)
-
-   ; Interpolation linéaire des profils et correction du décalage
-   n_lambda = 688 / delta_lambda_G
-   lambda = delta_lambda_G * findgen(n_lambda)
-   data_bas_interpol = interpolate(data_bas(*,Y1),lambda,cubic=-0.5)
-   help,data_bas_interpol
-   data_bas_interpol = data_bas_interpol(1:n_lambda-1)
-   data_haut_interpol = interpolate(data_haut(*,Y1),lambda,cubic=-0.5)
-   data_haut_interpol = data_haut_interpol(0:n_lambda-2)
+   lambda_final=pix_to_lambda(pix_raie1,pix_raie2,dim_tot)
    
    ; Vérification de la correction du décalage
    print,'Vérification du décalage'
