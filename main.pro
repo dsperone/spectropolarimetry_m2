@@ -1,17 +1,17 @@
-FUNCTION centre_gravite,fenetre,Y1,ecart
+FUNCTION centre_gravite,fenetre,ecart
 	; Détermine le centre de gravité d'une raie
 	; Entrées : fenêtre découpée dans le FITS, Y1 ordonnée du profil, ecart au centre
 	; Sortie : lambda_G (centre de gravité de la raie)
    window,0
    ; Zoom sur la raie
-   plot,fenetre(*,Y1),background=255,color=0
+   plot,fenetre,background=255,color=0
    print,'sélection grossière des bords de la raie pour zoomer dessus'
    print,'...bord gauche...'
    cursor,mini,Y2
    print,'...bord droit...'
    cursor,maxi,Y3
    ; Sélection du centre de la raie
-   plot,fenetre(mini:maxi,Y1),background=255,color=0
+   plot,fenetre(mini:maxi),background=255,color=0
    print,'...sélection du centre de la raie...'
    cursor,centre_raie,Y2
    ; Calcul des bords de la raie
@@ -25,7 +25,7 @@ FUNCTION centre_gravite,fenetre,Y1,ecart
    wdelete,0
    ; Calcul du centre de gravité
    lambda = findgen(lambda_B - lambda_A + 1)
-   I = fenetre(lambda_A:lambda_B,Y1)
+   I = fenetre(lambda_A:lambda_B)
    poids = 1.0 - I/I_c
    lambda_G = lambda_A + total(lambda*poids)/total(poids)
    print,'centre de gravité lambda G = ',lambda_G
@@ -39,15 +39,15 @@ FUNCTION read_fits,filename,result
 	RETURN, tab
 END
 
-FUNCTION pix_to_lambda,pix_raie1,pix_raie2,dim_tot
-	;Etalonnage en longueur d'onde du spectre en utilisant les centres de gravités des raies telluriques la plus à gauche et celle juste après la deuxième raie du Fe
+FUNCTION pix_to_lambda,pix_raie1,pix_raie2
+	;Etalonnage en longueur d'onde du spectre en utilisant les centres de gravités des raies telluriques la plus à gauche et la plus à droite du spectre
 	;lambda_final retourne un tableau dont les composantes sont les longueurs d'onde correspondant aux pixels initiaux
 	delta_pix=pix_raie2-pix_raie1
 	lambda_raie1=6298.45
-	lambda_raie2=6302.76
+	lambda_raie2=6305.81
 	delta_lambda=lambda_raie2-lambda_raie1
 	pix_lambda=delta_lambda/delta_pix
-	tot_pix=dim_tot
+	tot_pix=688.
 	tot_lambda=tot_pix*pix_lambda
 	lambda0=lambda_raie1-pix_raie1*pix_lambda
 	pix_total=findgen(tot_pix)	
@@ -184,45 +184,57 @@ PRO main,seq_data,seq_dark,seq_flat,seq_dark_flat
    data_haut = t * data_haut
 
    ; Calcul du centre de gravité d'une raie atm. pour les deux profils (décalage)
-   print,'Calcul du décalage spectral entre les profils'
-   ecart_atm = 8	; demi-largeur approximative d'une raie atmosphérique en pix
+   ;print,'Calcul du décalage spectral entre les profils'
+   ecart_atm = 4	; demi-largeur approximative d'une raie atmosphérique en pix
    ; Profil bas
-   lambda_G_bas  = centre_gravite(data_bas,Y1,ecart_atm)
+   ;lambda_G_bas  = centre_gravite(data_bas,Y1,ecart_atm)
    ; Profil haut
-   lambda_G_haut = centre_gravite(data_haut,Y1,ecart_atm)
-   delta_lambda_G = abs(lambda_G_haut - lambda_G_bas)
-   print,'décalage delta_lambda_G =',delta_lambda_G
+   ;lambda_G_haut = centre_gravite(data_haut,Y1,ecart_atm)
+   ;delta_lambda_G = abs(lambda_G_haut - lambda_G_bas)
+   ;print,'décalage delta_lambda_G =',delta_lambda_G
 
-   ; Interpolation linéaire des profils et correction du décalage
-   n_lambda = 688 / delta_lambda_G
-   lambda = delta_lambda_G * findgen(n_lambda)
-   data_bas_interpol = interpolate(data_bas(*,Y1),lambda,cubic=-0.5)
-   data_bas_interpol = data_bas_interpol(1:n_lambda-1)
-   data_haut_interpol = interpolate(data_haut(*,Y1),lambda,cubic=-0.5)
-   data_haut_interpol = data_haut_interpol(0:n_lambda-2)
-   dim=size(data_bas_interpol)
-   dim_tot=size(1)
-   print,dim(1)
+   ; Calcul du décalage
+   print,'Sélection de la raie la plus à gauche du spectre'
+   pix1=centre_gravite(data_haut(*,Y1),ecart_atm)
+   pix2=centre_gravite(data_bas(*,Y1),ecart_atm)
+   delta_pix=abs(pix1-pix2)
+   print,delta_pix
 
    ; Etalonnage en longueur d'onde du spectre
-   ;print,"Etalonnage en longueur d'onde du spectre"
-   ;print,'Sélection raie la plus à gauche'
-   ;pix_raie1=centre_gravite(data_haut_interpol,Y1,ecart_atm)
-   ;print,'Sélection raie juste à droite de la deuxième raie du Fe'
-   ;pix_raie2=centre_gravite(data_haut_interpol,Y1,ecart_atm)
-   ;lambda_final=pix_to_lambda(pix_raie1,pix_raie2,dim_tot)
+   print,"Etalonnage en longueur d'onde du spectre"
+   print,'Sélection raie la plus à gauche'
+   pix_raie1=centre_gravite(data_haut(*,Y1),ecart_atm)
+   print,'Sélection raie juste à droite de la deuxième raie du Fe'
+   pix_raie2=centre_gravite(data_haut(*,Y1),ecart_atm)
+   lambda_final=pix_to_lambda(pix_raie1,pix_raie2)
+   
+   ; Interpolation linéaire pour appliquer le décalage
+   n_pix=688./delta_pix
+   lambda = delta_pix * findgen(n_pix)
+   delta_lambda_1pix = lambda_final(1)-lambda_final(0)
+   delta_lambda_delta_pix = delta_lambda_1pix*delta_pix
+   lambda_final_interpol = lambda_final(0)+delta_lambda_delta_pix * findgen(n_pix)
+   ;print,delta_lambda_1pix,delta_lambda_delta_pix,lambda(0:100)
+   data_bas_interpol = interpolate(data_bas(*,Y1),lambda,cubic=-0.5)
+   data_bas_interpol = data_bas_interpol(5:n_pix-1)
+   data_haut_interpol = interpolate(data_haut(*,Y1),lambda,cubic=-0.5)
+   data_haut_interpol = data_haut_interpol(0:n_pix-4)
+   ;dim=size(data_bas_interpol)
+   ;dim_tot=size(1)
+   ;print,dim(1)
+   ;cgplot,lambda_final_interpol,data_haut_interpol
    
    ; Vérification de la correction du décalage
    print,'Vérification du décalage'
    window,0
    V_sur_I = (data_haut_interpol - data_bas_interpol) / (data_haut_interpol + data_bas_interpol)
-   plot,V_sur_I,background=255,color=0
-
+   plot,lambda_final_interpol,V_sur_I,background=255,color=0
+   stop
    ; Affiche le résultat
    print,'Résultat'
    window,1
-   plot,data_bas_interpol,background=255,color=0
-   oplot,data_haut_interpol,color=0
+   plot,lambda_final_interpol,data_bas_interpol,background=255,color=0
+   oplot,lambda_final_interpol,data_haut_interpol,color=0
    test_fe=0
    WHILE (test_t EQ 0) DO BEGIN
       print,'Passer à la sélection de la raie du Fe à étudier ? 0=Non, 1=Oui'
